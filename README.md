@@ -1,1 +1,3 @@
-# circRNA-reads-illumina
+circRNA identification
+The code repository on GitHub represents a pipeline designed to identify viral circular RNAs (circRNAs) starting from alignment data and the reference genome of the virus of interest. The pipeline's key function is to detect back-splicing regions, which are indicative of circRNA formation, by analyzing and reversing alignments mapped to the genome. Specifically, it leverages the unique characteristics of back-splicing events, where the 3' end of an upstream exon joins with the 5' end of a downstream exon in a non-linear arrangement, creating a circular RNA molecule.
+The purpose of this pipeline is to accurately identify the positions of back-splice junctions and potentially infer the structure of circular RNAs. 
