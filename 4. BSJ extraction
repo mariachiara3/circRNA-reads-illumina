@@ -1,0 +1,92 @@
+# This script identifies Break Spanning Joints (BSJs) based on paired sequencing read data from an input file. 
+# It processes the data line by line, evaluating conditions derived from the alignment information (such as positions, strand, and other columns) to determine valid BSJs.
+# The script groups reads that share the same BSJ into a dictionary, ensuring that all reads belonging to the same BSJ are identified together.
+# The results are written into two output files:
+# 1. A file containing the identified BSJs.
+# 2. A file containing the grouped BSJs, where each BSJ is sorted by its position and includes all the associated reads.
+
+# Input and Output file paths
+input_file_path = "/path/output/code3"
+output_file_path = "/path/to/outputfile"
+output_bsj_grouped_path = "/path/to/outputfile_grouped.txt"
+
+# Read the input file
+with open(input_file_path, 'r') as infile:
+    lines = infile.readlines()
+
+# Create the main output file
+with open(output_file_path, 'w') as outfile:
+    bsj_dict = {}  # Dictionary to group BSJs
+
+    # Process consecutive lines in pairs
+    for i in range(0, len(lines) - 1, 1):  # Analyze pairs of consecutive lines
+        # Split the lines into columns
+        row1 = lines[i].strip().split('\t')
+        row2 = lines[i + 1].strip().split('\t')
+
+        # Extract the required column values
+        id1, id2 = row1[0], row2[0]  # First column
+        pos1_strand, pos2_strand = row1[2], row2[2]  # Third column (Strand)
+        last1, last2 = int(row1[6]), int(row2[6])  # Last column (Seventh)
+        col1, col2 = int(row1[3]), int(row2[4])  # Column 4 from the first and Column 5 from the second
+
+        # Check if the first column and the third column are identical
+        if id1 == id2 and pos1_strand == pos2_strand:
+            # Flag to monitor if a condition is satisfied
+            cond_satisfied = False
+
+            # Condition 1: If the last column of the first row is 1 and the second is 2 or 3
+            if last1 == 1 and (last2 == 2 or last2 == 3):
+                if col2 >= col1 and int(row1[4]) <= int(row2[3]):  # Valid condition
+                    outfile.write(f"{id1}\t{row1[3]}\t{row2[4]}\n")
+                    bsj_key = tuple(sorted([row1[3], row2[4]]))
+                    bsj_dict.setdefault(bsj_key, []).append(id1)
+                    cond_satisfied = True
+
+            # Condition 2: If the last column of the first row is 1 or 3, and the second is 2
+            if (last1 == 1 or last1 == 3) and int(row1[4]) <= int(row2[3]):
+                if col2 >= col1 and col2 >= int(row1[3]):  # Valid condition
+                    outfile.write(f"{id1}\t{row1[3]}\t{row2[4]}\n")
+                    bsj_key = tuple(sorted([row1[3], row2[4]]))
+                    bsj_dict.setdefault(bsj_key, []).append(id1)
+                    cond_satisfied = True
+
+            # Condition 3: If the last column of the first row is 2 and the second is 1 or 3
+            if last1 == 2 and (last2 == 1 or last2 == 3):
+                if int(row1[4]) >= int(row2[3]) and int(row1[3]) >= col2:  # Valid condition
+                    outfile.write(f"{id1}\t{row1[4]}\t{row2[3]}\n")
+                    bsj_key = tuple(sorted([row1[4], row2[3]]))
+                    bsj_dict.setdefault(bsj_key, []).append(id1)
+                    cond_satisfied = True
+
+            # Condition 4: If the last column of the first row is 2 or 3, and the second is 1
+            if (last1 == 2 or last1 == 3) and last2 == 1:
+                if int(row1[4]) >= int(row2[3]) and int(row1[3]) >= col2:  # Valid condition
+                    outfile.write(f"{id1}\t{row1[4]}\t{row2[3]}\n")
+                    bsj_key = tuple(sorted([row1[4], row2[3]]))
+                    bsj_dict.setdefault(bsj_key, []).append(id1)
+                    cond_satisfied = True
+
+            if not cond_satisfied:
+                pass  
+
+            # After defining a BSJ, the other read (forward or reverse) is checked to ensure its alignment interval 
+            # is within the range of the BSJ. Once the BSJs are extracted, it's verified that all alignments of 
+            # those reads fit within the BSJ.
+
+# Create the output file with grouped and sorted BSJs
+with open(output_bsj_grouped_path, 'w') as grouped_outfile:
+    grouped_bsj_list = []
+    for bsj, ids in bsj_dict.items():
+        unique_ids = ",".join(set(ids))  # Join the IDs into a comma-separated string
+        
+        # Ensure the second column is less than the third column
+        pos1, pos2 = sorted(bsj, key=int)
+        grouped_bsj_list.append((unique_ids, pos1, pos2))
+
+    # Sort the BSJs by the second column
+    grouped_bsj_list.sort(key=lambda x: int(x[1]))
+
+    # Write the sorted grouped BSJs to the output file
+    for grouped_bsj in grouped_bsj_list:
+        grouped_outfile.write(f"{grouped_bsj[0]}\t{grouped_bsj[1]}\t{grouped_bsj[2]}\n")
