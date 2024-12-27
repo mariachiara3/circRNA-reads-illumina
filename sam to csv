@@ -1,0 +1,42 @@
+"""
+This script is designed to convert SAM format alignment files to a more versatile format
+for identifying back-splice junctions (BSJs). It extracts key information such as the
+start and end positions of alignments on the reference genome (for each segment) and the
+strand orientation. The script allows the user to define all input and output variables
+for maximum flexibility.
+"""
+
+import csv
+
+sam_input_file = "input.sam"
+output_file = "output_bsj_data.csv"
+
+def parse_sam_file(input_file, output_file):
+    """
+    Parses a SAM file to extract alignment start and end positions and strand orientation.
+    Writes the extracted data into a CSV file.
+
+    Parameters:
+        input_file (str): Path to the SAM file to be parsed.
+        output_file (str): Path to the CSV file where parsed data will be saved.
+    """
+    with open(input_file, 'r') as sam_file:
+        with open(output_file, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(["Query_Name", "Start_Position", "End_Position", "Strand"])
+            for line in sam_file:
+                if line.startswith("@"): 
+                    continue
+                fields = line.strip().split('\t')
+                query_name = fields[0]
+                flag = int(fields[1])
+                start_position = int(fields[3])
+                cigar = fields[5]
+                sequence = fields[9]
+                strand = "-" if (flag & 16) else "+"
+                match_lengths = sum(int(c[:-1]) for c in filter(lambda x: x.endswith('M'), cigar.split("\d")))
+                end_position = start_position + match_lengths - 1
+                writer.writerow([query_name, start_position, end_position, strand])
+
+parse_sam_file(sam_input_file, output_file)
+
