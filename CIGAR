@@ -1,0 +1,46 @@
+"""
+This script processes the output of the previous filter identifying splitting reads.
+It interprets the CIGAR strings from SAM alignment files to extract precise details about
+read alignments, such as matches, deletions, and insertions, for further analysis.
+"""
+
+import re
+
+input_file_path = "splitting_reads.txt"
+output_file_path = "cigar_interpretation_results.txt"
+
+def interpret_cigar(cigar_string):
+    """
+    Parses the CIGAR string to count matches, insertions, and deletions.
+
+    Parameters:
+        cigar_string (str): The CIGAR string from a SAM file alignment.
+
+    Returns:
+        dict: A dictionary with counts for matches (M), insertions (I), and deletions (D).
+    """
+    operations = re.findall(r'(\d+)([MID])', cigar_string)
+    counts = {"M": 0, "I": 0, "D": 0}
+
+    for length, op in operations:
+        if op in counts:
+            counts[op] += int(length)
+
+    return counts
+
+with open(input_file_path, "r") as input_file, open(output_file_path, "w") as output_file:
+    output_file.write("Read\tMatches\tInsertions\tDeletions\n")
+
+    for line in input_file:
+        parts = line.strip().split("|")
+        if len(parts) < 5:
+            continue
+
+        read_name = parts[0].split(":")[1].strip()
+        cigar_string = parts[4].split(":")[1].strip()
+
+        cigar_counts = interpret_cigar(cigar_string)
+
+        output_file.write(f"{read_name}\t{cigar_counts['M']}\t{cigar_counts['I']}\t{cigar_counts['D']}\n")
+
+print(f"CIGAR interpretation completed. Results saved to '{output_file_path}'.")
